@@ -1,0 +1,721 @@
+1.
+select distinct name
+from customers natural join flewon
+inner join (select customerid 
+from customers natural join flewon 
+where date_part('dow', flightdate) = 1
+and regexp_match(substring(name, 2, 1),'(a|e|i|o|u)') is  null
+order by birthdate limit 1) as oldest on oldest.customerid <> customers.customerid
+where date_part('dow', flightdate) = 1
+and regexp_match(substring(name, 2, 1),'(a|e|i|o|u)') is  null
+order by name;
+
+select distinct name
+from customers natural join flewon 
+where date_part('dow', flightdate) = 1
+and regexp_match(substring(name, 2, 1),'(a|e|i|o|u)') is  null
+and customerid <> (select customerid 
+from customers natural join flewon 
+where date_part('dow', flightdate) = 1
+and regexp_match(substring(name, 2, 1),'(a|e|i|o|u)') is  null
+order by birthdate limit 1)
+order by name;
+
+
+2.
+
+select *
+from customers
+where frequentflieron = 'DL';
+and 
+
+select * from customers where
+(
+(date_part('month', birthdate) < 3
+and date_part('day', birthdate) < 15)
+or 
+(date_part('month', birthdate) > 10
+and date_part('day', birthdate) > 15)
+)
+and frequentflieron = 'DL';
+
+select customerid, name, birthdate from customers where
+(
+date_part('doy', birthdate) < 46
+or 
+date_part('doy', birthdate) > 319
+)
+and frequentflieron = 'DL'
+order by birthdate;
+
+
+
+3.
+select count(*) as cnt, customerid, name, airlineid 
+from flewon
+natural join customers
+natural join flights
+group by frequentflieron;
+
+// groups number of times customer flew on plane
+select count(*), customerid from flewon
+group by customerid order by count(*);
+
+// flightid equals frequentflieron
+select flightid, flewon.customerid, customers.frequentflieron
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) = customers.frequentflieron;
+
+
+select count(*), customerid from (
+select flightid, flewon.customerid, customers.frequentflieron
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) = customers.frequentflieron)
+as ff
+group by ff.customerid
+;
+
+
+select count(*), customerid from (
+select flightid, flewon.customerid, customers.frequentflieron
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) = customers.frequentflieron)
+as ff
+group by ff.customerid
+order by count(*) desc;
+
+
+select ranknum, customers.name, customers.frequentflieron, ranker.cnt from 
+(select * , rank() over ( order by cnt desc) as rankNum
+from (
+select count(*) as cnt, customerid
+from (
+select flightid, flewon.customerid, customers.frequentflieron
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) = customers.frequentflieron)
+as ff
+group by ff.customerid)
+as rankf)
+as ranker
+join customers
+on customers.customerid = ranker.customerid
+where ranknum <= 10
+order by ranknum, name;
+
+
+
+4.
+
+with ff as (select count(*), frequentflieron
+from customers natural join airlines
+group by frequentflieron)
+select min(count), airlineid
+from ff natural join airlines
+group by airlineid;
+
+with ff as (select count(*) as cnt, frequentflieron
+from customers join airlines
+on customers.frequentflieron = airlines.airlineid
+group by frequentflieron)
+select *
+from ff 
+where cnt = (select min(cnt) from ff);
+
+
+with ff as 
+(select count(*) as cnt, airlines.name
+from customers join airlines
+on customers.frequentflieron = airlines.airlineid
+group by airlines.name)
+select position(' ' in name), min(cnt)
+from ff
+where cnt = (select min(cnt) from ff)
+group by name;
+
+
+with ff as 
+(select count(*) as cnt, airlines.name
+from customers join airlines
+on customers.frequentflieron = airlines.airlineid
+group by airlines.name)
+select name, min(cnt)
+from ff
+where cnt = (select min(cnt) from ff)
+group by name
+order by name;
+
+
+select substring(name for position(' ' in name))
+from airlines;
+
+5.
+
+// groups number of times customer flew on plane
+select count(*), customerid from flewon
+group by customerid order by count(*) desc;
+
+
+select count(*), customerid from flewon as f1
+where exists
+(
+    select * from flewon as f2
+    where f1.flightid = f2.flightid
+    and f1.flightdate = f2.flightdate
+    and f1.customerid != f2.customerid
+)
+group by customerid
+
+select count, customerid from
+(select count(*), customerid from flewon
+group by customerid 
+where count = (select max(count) from )
+order by count(*) desc)
+as cnt
+group by customerid;
+
+
+with a1 as (
+    select count(*) as cnt, customerid from flewon
+    group by customerid order by count(*) desc
+)
+select * from a1 
+where a1.cnt = (select max(cnt) from a1)
+
+
+with a1 as (
+    select count(*) as cnt, customerid from flewon
+    group by customerid order by count(*) desc
+)
+select * from
+a1 join flewon
+on a1.customerid = flewon.customerid
+where a1.cnt = (select max(cnt) from a1)
+
+
+
+
+with a1 as (
+    select count(*) as cnt, customerid from flewon
+    group by customerid order by count(*) desc
+),
+a2 as (
+select * from
+a1 natural join flewon
+natural join customers
+where a1.cnt = (select max(cnt) from a1)
+)
+select * from a2
+where flightid = 'UA101'
+and flightdate = '2016-08-04'
+
+
+with a1 as (
+select count(*) as cnt, customerid from flewon group by customerid order by count(*) desc
+)
+, a2 as (
+select customerid, flightid, flightdate from a1  natural join flewon f where a1.cnt=(select max(cnt) from a1)
+)
+, a3 as(
+select a21.customerid as myid, a22.customerid as otherid, a21.flightid,a21.flightdate from a2 as a21 left outer join a2 a22 on a21.flightid=a22.flightid and a21.flightdate=a22.flightdate and a21.customerid!=a22.customerid where a22.customerid is not null
+)
+select c.name, aaaa.ccnt from (
+select myid, count(*) as ccnt from
+( select distinct myid, otherid from a3
+order by a3.myid
+) as aaa group by myid
+) aaaa join customers as c on c.customerid=aaaa.myid
+order by aaaa.ccnt desc
+;
+
+
+6.
+
+select airports.name, aaa.ratio from
+(
+select total1.airport,
+cast(cast(coalesce(aa1.cntaa, 0) as double precision)/cast(total1.cnttotal as double precision) as decimal(2,2)) as ratio
+    from
+    (
+        select count(*) as cnttotal, airport from
+        (select dest as airport from flights
+        union all
+        select source as airport from flights
+        ) as total
+        group by airport
+    ) as total1
+    left outer join
+    (
+        select count(*) as cntaa, airport from
+        (select dest as airport from flights
+        where airlineid = 'AA'
+        union all
+        select source as airport from flights
+        where airlineid = 'AA') as aa
+        group by airport
+    ) as aa1
+on total1.airport=aa1.airport
+) aaa join airports on aaa.airport=airports.airportid
+order by aaa.ratio desc, airports.name
+;
+
+select airports.name, ratio 
+from
+(
+    select airports.airportid, airports.name, cnttotal, cntaa,
+    coalesce(cast(cast(aa1.cntaa as double precision)/cast(total1.cnttotal as double precision) as decimal(2,2)), 0.00) as ratio
+    from 
+    (
+        select count(*) as cnttotal, airport from
+        (select dest as airport from flights
+        union all
+        select source as airport from flights
+        ) as total
+        group by airport
+    ) as total1
+    left outer join
+    (
+        select count(*) as cntaa, airport from
+        (select dest as airport from flights
+        where airlineid = 'AA'
+        union all
+        select source as airport from flights
+        where airlineid = 'AA') as aa
+        group by airport
+    ) as aa1
+    on total1.airport = aa1.airport
+    right outer join airports
+    on airports.airportid = total1.airport
+) as percenttable
+join airports
+on airports.airportid = percenttable.airportid
+order by ratio desc, airports.name
+;
+
+
+select airports.name, ratio 
+from
+(
+    select airports.airportid, airports.name, cnttotal, cntaa,
+    cast(coalesce(cast(aa1.cntaa as double precision)/cast(total1.cnttotal as double precision), 0) as decimal(2,2)) as ratio
+    from 
+    (
+        select count(*) as cnttotal, airport from
+        (select dest as airport from flights
+        union all
+        select source as airport from flights
+        ) as total
+        group by airport
+    ) as total1
+    natural join
+    (
+        select count(*) as cntaa, airport from
+        (select dest as airport from flights
+        where airlineid = 'AA'
+        union all
+        select source as airport from flights
+        where airlineid = 'AA') as aa
+        group by airport
+    ) as aa1
+    right outer join airports
+    on airports.airportid = total1.airport
+) as percenttable
+join airports
+on airports.airportid = percenttable.airportid
+order by ratio desc, airports.name
+;
+
+
+select count(*) as match, airlineid
+from flights
+where (source = 'DFW' or dest = 'DFW')
+group by airportid;
+
+
+
+select count(*)
+from flights
+where airlineid = 'AA'
+and (source = 'JFK' or dest = 'JFK')
+;
+
+
+select count(*), flights.source
+from flights
+group by source
+
+select flights.source as airport
+from flights
+union
+select flights.dest as airport
+from flights
+group by airport
+
+
+
+
+select count(*), flights.source as airport
+from flights
+group by airport
+union
+select count(*), flights.dest as airport
+from flights
+group by airport
+
+select *, cntsrc + cntdest from (
+select count(*) as cntsrc, flights.source as airportsrc
+from flights
+group by airportsrc
+join
+select count(*) as cntdest, flights.dest as airportdest
+from flights
+group by airportdest)
+on airportdest = airportsrc
+
+
+select *,
+cast(aa1.cntaa as double precision)/cast(total1.cnttotal as double precision) as ratio
+from 
+(
+    select count(*) as cnttotal, airport from
+    (select dest as airport from flights
+    union all
+    select source as airport from flights
+    ) as total
+    group by airport
+) as total1
+natural join
+(
+    select count(*) as cntaa, airport from
+    (select dest as airport from flights
+    where airlineid = 'AA'
+    union all
+    select source as airport from flights
+    where airlineid = 'AA') as aa
+    group by airport
+) as aa1
+
+
+select airports.name, ratio
+from
+(
+    select *,
+    cast(cast(aa1.cntaa as double precision)/cast(total1.cnttotal as double precision) as decimal(2,2)) as ratio
+    from 
+    (
+        select count(*) as cnttotal, airport from
+        (select dest as airport from flights
+        union all
+        select source as airport from flights
+        ) as total
+        group by airport
+    ) as total1
+    natural join
+    (
+        select count(*) as cntaa, airport from
+        (select dest as airport from flights
+        where airlineid = 'AA'
+        union all
+        select source as airport from flights
+        where airlineid = 'AA') as aa
+        group by airport
+    ) as aa1
+) as percenttable
+right outer join airports
+on airports.airportid = percenttable.airport
+order by ratio desc
+
+//newest
+select airports.name, ratio 
+from
+(
+    select airports.airportid, airports.name, cnttotal, cntaa,
+    coalesce(cast(cast(aa1.cntaa as double precision)/cast(total1.cnttotal as double precision) as decimal(2,2)), 0.00) as ratio
+    from 
+    (
+        select count(*) as cnttotal, airport from
+        (select dest as airport from flights
+        union all
+        select source as airport from flights
+        ) as total
+        group by airport
+    ) as total1
+    natural join
+    (
+        select count(*) as cntaa, airport from
+        (select dest as airport from flights
+        where airlineid = 'AA'
+        union all
+        select source as airport from flights
+        where airlineid = 'AA') as aa
+        group by airport
+    ) as aa1
+    right outer join airports
+    on airports.airportid = total1.airport
+) as percenttable
+join airports
+on airports.airportid = percenttable.airportid
+order by ratio desc, airports.name
+
+
+
+(select source as airport, flightid, airlineid, local_departing_time
+from flights
+where airlineid = 'AA'
+union
+select dest as airport, flightid, airlineid, local_departing_time
+from flights
+where airlineid = 'AA'
+)join (
+select source as airport, flightid, airlineid, local_departing_time
+from flights
+union
+select dest as airport, flightid, airlineid, local_departing_time
+from flights
+)
+on total.airport = air.airport
+
+
+select airports.name, airp.cnt from airports left outer join (
+select count(*) as cnt, airport from
+(
+select source as airport, flightid, airlineid, local_departing_time
+from flights
+where airlineid = 'AA'
+union
+select dest as airport, flightid, airlineid, local_departing_time
+from flights
+where airlineid = 'AA'
+) as air
+join (
+select source as airport, flightid, airlineid, local_departing_time
+from flights
+union
+select dest as airport, flightid, airlineid, local_departing_time
+from flights
+) as total
+on total.airport = air.airport
+group by airport) as airp
+on airports.airportid = airp.airport
+;
+
+
+
+7.
+
+// flightid not equals frequentflieron
+select flightid, flewon.customerid, customers.frequentflieron
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) != customers.frequentflieron;
+
+
+customers.name, flewon.flightid, 
+
+
+select customers.name, ff.cnt from (
+select count(*) as cnt, flewon.customerid
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) != customers.frequentflieron
+group by flewon.customerid)
+as ff
+join customers
+on customers.customerid = ff.customerid
+
+
+where cnt = (select max(cnt) from ff)
+order by ff.cnt desc;
+
+
+
+select ranktable.name from (
+select customers.name, ff.cnt,
+rank() over ( order by cnt desc) as ranknum
+from (
+select count(*) as cnt, flewon.customerid
+from flewon join customers
+on customers.customerid = flewon.customerid
+where substring(flightid for 2) != customers.frequentflieron
+group by flewon.customerid)
+as ff
+join customers
+on customers.customerid = ff.customerid) 
+as ranktable
+where ranknum <=1
+order by ranktable.name
+
+
+8.
+
+with a1 as (
+select flightid, customerid, flightdate, customers.name
+from flewon natural join customers 
+)
+select a2.name, a2.flightid, a2.flightdate-1, a2.flightdate from a1 as a2
+where exists 
+(
+    select * from a1 as a3
+    where a2.flightid = a3.flightid
+    and a2.customerid = a3.customerid
+    and a2.flightdate = a3.flightdate + 1
+)
+order by a2.name, a2.flightid, a2.flightdate
+
+
+
+
+9.
+with a1 as (
+    select * from flights
+    where dest = 'IAD' or source = 'IAD'
+)
+select firstflightid, secondflightid,
+source, dest,
+layovertime
+from (
+    select a2.flightid as firstflightid,
+    a3.flightid as secondflightid,
+    a2.airlineid, a2.source, a3.dest,
+    a2.local_arrival_time,
+    a3.local_departing_time,
+    extract
+    (epoch from 
+        (a3.local_departing_time - a2.local_arrival_time)   
+    ) as layovertime
+    from a1 as a2
+    join a1 as a3
+    on a2.dest = a3.source
+    and a2.airlineid = a3.airlineid
+) as layover
+where layovertime >= 3600
+and layovertime <= 14400
+order by layovertime
+
+
+
+with a1 as (
+    select * from flights
+    where dest = 'IAD' or source = 'IAD'
+)
+select firstflightid, secondflightid,
+source, dest,
+extract(second from layovertime)
+from (
+    select a2.flightid as firstflightid,
+    a3.flightid as secondflightid,
+    a2.airlineid, a2.source, a3.dest,
+    a2.local_arrival_time,
+    a3.local_departing_time,
+    extract 
+        (epoch from (a3.local_departing_time - a2.local_arrival_time) )  
+    as layovertime
+    from a1 as a2
+    join a1 as a3
+    on a2.dest = a3.source
+    and a2.airlineid = a3.airlineid
+) as layover
+where layovertime >= 3600
+and layovertime <= 14400
+order by layovertime
+
+
+
+
+with a1 as (
+    select * from flights
+    where dest = 'IAD' or source = 'IAD'
+)
+select firstflightid, secondflightid,
+source, dest,
+layovertime
+from (
+    select a2.flightid as firstflightid,
+    a3.flightid as secondflightid,
+    a2.airlineid, a2.source, a3.dest,
+    a2.local_arrival_time,
+    a3.local_departing_time,
+    (a3.local_departing_time - a2.local_arrival_time) 
+    as layovertime
+    from a1 as a2
+    join a1 as a3
+    on a2.dest = a3.source
+    and a2.airlineid = a3.airlineid
+) as layover
+where layovertime >= '1:00:00'
+and layovertime <= '4:00:00'
+order by layovertime
+
+
+10
+
+
+select count(*), flights.airlineid
+from flights
+group by flights.airlineid;
+
+
+select * from flights join airlines
+on flights.airlineid = airlines.airlineid
+where flights.source = airlines.hub
+or flights.dest = airlines.hub
+
+
+
+select count(*), flights.airlineid
+from (
+    select * from flights
+    join airlines
+    on flights.airlineid = airlines.airlineid
+    where flights.source = airlines.hub
+    or flights.dest = airlines.hub
+) as loyal
+join flights
+on flights.airlineid = loyal.airlineid
+group by flights.airlineid;
+
+
+
+select * 
+from (
+    select count(*), flights.airlineid
+    from flights
+    group by flights.airlineid
+) as total join airlines
+on total.airlineid = airlines.airlineid
+where total.source = airlines.hub
+or total.dest = airlines.hub
+
+
+
+select airlines.name, ranknum
+from airlines join 
+(
+select airlineid,
+rank() over ( order by ratio desc) as ranknum
+from (
+select matched, totalf, airlineid,
+cast(matched as double precision)/cast(totalf as double precision) as ratio 
+from (
+select count(*) as matched, airlines.airlineid
+from flights
+natural join airlines
+where flights.source = airlines.hub
+or flights.dest = airlines.hub
+group by airlines.airlineid)
+as loyal
+natural join
+(select count(*) as totalf, flights.airlineid
+from flights
+group by flights.airlineid
+) as total
+) as loyalratio
+) as ranked
+on airlines.airlineid = ranked.airlineid
+order by ranknum;
+
+
+on loyal.airlineid = total.airlineid
